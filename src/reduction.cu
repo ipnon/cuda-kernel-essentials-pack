@@ -49,15 +49,32 @@ int main() {
   int threadsPerBlock = 256;
   int numBlocks = (n + threadsPerBlock - 1) / threadsPerBlock;
 
-  // First kernel: N elements => numBlocks partial sums
+  // Reduce n elements -> numBlocks partial sums
+  // Each block reduces 256 elements to 1 partial sum
   reduce_sum<<<numBlocks, threadsPerBlock>>>(d_input, d_partial, n);
 
-  // Second kernel: numBlocks partial sums -> 1 final sum
-  reduce_sum<<<1, threadsPerBlock>>>(d_partial, d_output, numBlocks);
+  // Iteratively reduce until 1 element remains
+  // Why do we need to iterate?
+  // threadsPerBlock < numBlocks (numBlocks is 3907 when n is 1,000,000)
+  // One kernel launch can only reduce by a factor of 256.
+  int remaining = numBlocks;
+  float *in_ptr = d_partial;
+  float *out_ptr = d_output;
 
-  // Copy D->H
+  while (1 < remaining) {
+    int blocks = (remaining + threadsPerBlock - 1) / threadsPerBlock;
+    reduce_sum<<<blocks, threadsPerBlock>>>(in_ptr, out_ptr, remaining);
+    remaining = blocks;
+
+    // Swap so that the output becomes the input for the next iteration.
+    float *temp = in_ptr;
+    in_ptr = out_ptr;
+    out_ptr = temp;
+  }
+
+  // The result is in in_ptr, not d_output, due to the swapping.
   float h_output;
-  cudaMemcpy(&h_output, d_output, sizeof(float), cudaMemcpyDeviceToHost);
+  cudaMemcpy(&h_output, in_ptr, sizeof(float), cudaMemcpyDeviceToHost);
 
   // Verify results
   float cpu_sum = 0.0f;
