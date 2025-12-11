@@ -59,7 +59,7 @@ int main() {
 
   // Exclusive prefix sum: each element is the sum of all elements before it.
   printf("First 10: ");
-  for (int i = 0; i < 10; i++) printf("%.0f ", h_output[i]);
+  for (int i = 0; i < 10; i++) printf("%.0f, ", h_output[i]);
   printf("\nExpected: 0, 1, 3, 6, 10, 15, 21, 28, 36, 45\n");
 
   free(h_input);
