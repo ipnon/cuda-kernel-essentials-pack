@@ -8,11 +8,9 @@ __global__ void relu(float* a, float* b, int n) {
   }
 }
 
-// cudaMemCpy moves data across PCIe bus.
 int main() {
   int n = 1'000'000;
 
-  // Allocate host memory
   float *h_a, *h_b;
   float *d_a, *d_b;
   h_a = (float*)malloc(n * sizeof(float));
@@ -20,30 +18,44 @@ int main() {
   for (int i = 0; i < n; i++) {
     h_a[i] = (i % 2 == 0) ? i : -i;
   }
-
-  // Allocate device memory
   cudaMalloc(&d_a, n * sizeof(float));
   cudaMalloc(&d_b, n * sizeof(float));
-
-  // Copy H->D
   cudaMemcpy(d_a, h_a, n * sizeof(float), cudaMemcpyHostToDevice);
 
-  // Launch kernel
+  // Verify kernel
   int threadsPerBlock = 256;
   int numBlocks = (n + threadsPerBlock - 1) / threadsPerBlock;
-
   relu<<<numBlocks, threadsPerBlock>>>(d_a, d_b, n);
-
-  // Copy D->H
   cudaMemcpy(h_b, d_b, n * sizeof(float), cudaMemcpyDeviceToHost);
-
-  // Verify results
   int errors = 0;
   for (int i = 0; i < n; i++) {
     float expected = fmaxf(0.0f, h_a[i]);  // Same as ReLU
     if (h_b[i] != expected) errors++;
   }
   printf("Errors: %d\n", errors);
+
+  // Benchmarking
+  cudaEvent_t start, stop;
+  cudaEventCreate(&start);
+  cudaEventCreate(&stop);
+
+  for (int i = 0; i < 10; i++) {
+    relu<<<numBlocks, threadsPerBlock>>>(d_a, d_b, n);
+  }
+  cudaDeviceSynchronize();
+
+  cudaEventRecord(start);
+  for (int i = 0; i < 100; i++) {
+    relu<<<numBlocks, threadsPerBlock>>>(d_a, d_b, n);
+  }
+  cudaEventRecord(stop);
+  cudaEventSynchronize(stop);
+  float ms;
+  cudaEventElapsedTime(&ms, start, stop);
+  printf("Average time: %.4f ms\n", ms / 100);
+
+  cudaEventDestroy(start);
+  cudaEventDestroy(stop);
 
   // Free memory
   free(h_a);
