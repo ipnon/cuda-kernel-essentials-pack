@@ -54,7 +54,9 @@ def bench_prefix_sum():
   print(f"Prefix sum: {ms:.4f} ms")
 
 def bench_matmul():
-  n = 256
+
+  # Too small a matrix size leads to efficient caching
+  n = 1024
   a = b = torch.ones(n, n, device='cuda')
   def fn():
     c = torch.matmul(a, b)

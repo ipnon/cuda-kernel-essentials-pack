@@ -15,7 +15,7 @@ __global__ void matmul(float* A, float* B, float* C, int N) {
 }
 
 int main() {
-  int n = 256;
+  int n = 1024;
 
   // Host memory
   float *h_a, *h_b, *h_c;
