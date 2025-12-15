@@ -1,4 +1,4 @@
-# CUDA Kernel Essentials Pack
+# Essential CUDA kernels
 
 Five fundamental CUDA kernels implementing core GPU computing primitives, benchmarked against PyTorch on an NVIDIA A10 GPU.
 
